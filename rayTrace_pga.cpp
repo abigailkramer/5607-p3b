@@ -112,14 +112,33 @@ bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
 
 Line3D Reflect (Line3D ray, Line3D normal, Point3D hit){
   Plane3D plane = dot(normal, hit);
-  // ray = -1*MultiVector(ray);
   return sandwhich(plane,ray);
+}
+
+Line3D Refract(Line3D ray, Line3D normal, double ior) { //rn just making things brighter
+  double n_i = ior;
+  double n_r = 1.0;
+  double angle = acos(dot(ray,normal));
+  double cos_i = dot(ray,normal);
+
+  // check sign of dot product ^^ cos_i
+  if (cos_i < 0) { cos_i = -cos_i; } 
+  else {
+    normal = normal*-1;
+    n_r = ior;
+    n_i = 1.0;
+  }
+
+  double sin2_r = ior*ior*(1.0 - cos_i*cos_i);
+  double cos_r = sqrtf(1.0 - sin2_r);
+  double n = n_r / n_i;
+  return (normal*(n*cos_i - cos_r)) + (ray*n);
 }
 
 Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInfo, int depth) {
   Color color = Color(0,0,0);
   Point3D p = hitInfo.hit_point;
-  Point3D shadow_point = p + hitInfo.normal.dir()*0.001;
+  Point3D hit_point = p + hitInfo.normal.dir()*0.001;
   Dir3D N = hitInfo.normal.dir();
   Dir3D V = vee(p,eye).dir().normalized();
 
@@ -130,7 +149,7 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     bool blocked = false;
 
     for (auto& s : spheres) {
-      if (raySphereIntersect(shadow_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
+      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
     }
     if (blocked) continue;
 
@@ -147,10 +166,10 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     bool blocked = false;
     Dir3D L = (light.location - p).normalized();
     Line3D lightLine = vee(light.location,L).normalized();
-    Line3D shadow = vee(shadow_point,light.location).normalized();
+    Line3D shadow = vee(hit_point,light.location).normalized();
 
     for (auto& s : spheres) {
-      if (raySphereIntersect(shadow_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
+      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
     }
 
     double dist = p.distTo(light.location);  
@@ -158,7 +177,7 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
 
     float n_l = std::max(dot(N,L),0.f);
     Line3D line = -1*MultiVector(lightLine);
-    Dir3D R = Reflect(line,hitInfo.normal,shadow_point).dir();
+    Dir3D R = Reflect(line,hitInfo.normal,hit_point).dir();
     float v_r = pow(std::max(dot(V,R),0.f), hitInfo.ns);
 
     Color contribution = ((hitInfo.diffuse*n_l) + (hitInfo.specular*v_r));
@@ -171,11 +190,11 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     HitInformation shadow_hit = HitInformation();
     bool blocked = false;
     Dir3D L = (light.location - p).normalized();
-    Line3D shadow = vee(shadow_point, light.location).normalized();
+    Line3D shadow = vee(hit_point, light.location).normalized();
     Line3D lightLine = vee(light.location,L);
 
     for (auto& s : spheres) {
-      if (raySphereIntersect(shadow_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
+      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
     }
 
     float angle = acos(dot(shadow.normalized(),lightLine.normalized()));
@@ -187,7 +206,7 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     if (angle < light.angle1) attenuation = 1.0 / dist;    
 
     float n_l = std::max(dot(N,L),0.f);
-    Dir3D R = Reflect(lightLine,hitInfo.normal,shadow_point).dir();
+    Dir3D R = Reflect(lightLine,hitInfo.normal,hit_point).dir();
     float v_r = pow(std::max(dot(V,R),0.f), hitInfo.ns);
 
     Color contribution = ((hitInfo.diffuse*n_l) + (hitInfo.specular*v_r));
@@ -196,9 +215,12 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
 
   } // spot lights
 
-  Line3D mirror = Reflect(rayLine,hitInfo.normal,shadow_point).normalized();
-  Color mirror_color = EvaluateRayTree(shadow_point,mirror,depth+1);
-  color = color + (hitInfo.specular * mirror_color);
+  // Line3D mirror = Reflect(rayLine,hitInfo.normal,hit_point).normalized();
+  // color = color + (hitInfo.specular * EvaluateRayTree(hit_point,mirror,depth+1));
+
+  Point3D refract_pt = p - hitInfo.normal.dir()*0.001;
+  Line3D glass = Refract(rayLine,hitInfo.normal,hitInfo.ior).normalized();
+  color = color + (hitInfo.transmissive * EvaluateRayTree(refract_pt,glass,depth+1));
 
   color = color + (ambient_light*hitInfo.ambient);
   return color;

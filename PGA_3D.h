@@ -218,8 +218,7 @@ struct HitInformation {
   Point3D hit_point;
   Line3D normal;
   int ns;
-  float ior;
-  double t;
+  double ior,t;
 };
 
 struct Sphere{

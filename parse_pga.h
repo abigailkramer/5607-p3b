@@ -47,7 +47,7 @@ Color diffuse_color = Color(1,1,1);
 Color specular_color = Color(0,0,0);
 int ns = 5;
 Color transmissive_color = Color(0,0,0);
-float ior = 1;
+double ior = 1.0;
 
 //Lighting Parameters  -- make structs for each light type? to be able to go through them?
 std::vector<DirLight> dir_lights;
