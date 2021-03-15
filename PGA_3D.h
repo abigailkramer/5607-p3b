@@ -218,13 +218,16 @@ struct HitInformation {
   Point3D hit_point;
   Line3D normal;
   int ns;
-  double ior,t;
+  double ior;
+  double t;
 };
 
 struct Sphere{
-  float radius,ior;
-  int ns;
   Point3D pos;
+  float radius;
+
+  float ior;
+  int ns;
   Color ambient, diffuse, specular, transmissive;
 
   Sphere() {} ;
@@ -232,9 +235,13 @@ struct Sphere{
 
 struct Triangle{
   Point3D v1,v2,v3;
-  Dir3D n1,n2,n3;
-  Dir3D norm;
+  Line3D n1,n2,n3;
+  Line3D norm;
   bool is_normal;
+
+  float ior;
+  int ns;
+  Color ambient, diffuse, specular, transmissive;
 
   Triangle() {} ;
 };

@@ -87,18 +87,18 @@ bool raySphereIntersect(Point3D rayStart, Line3D rayLine, Point3D sphereCenter, 
 
 bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
   double currentDist = INF;                              // start as far away as possible
-  HitInformation possible = HitInformation();
+  HitInformation test = HitInformation();
   bool hit = false;
 
   for (auto& s : spheres) {
-    if (raySphereIntersect(rayStart,rayLine,s.pos,s.radius,&possible)) {
-      if (rayStart.distTo(possible.hit_point) > currentDist) continue;     // move from back to front
-      currentDist = rayStart.distTo(possible.hit_point);
+    if (raySphereIntersect(rayStart,rayLine,s.pos,s.radius,&test)) {
+      if (rayStart.distTo(test.hit_point) > currentDist) continue;     // move from back to front
+      currentDist = rayStart.distTo(test.hit_point);
 
       hit = true;
-      info->hit_point = possible.hit_point;
-      info->t = possible.t;
-      info->normal = possible.normal;
+      info->hit_point = test.hit_point;
+      info->t = test.t;
+      info->normal = test.normal;
       info->ambient = s.ambient;
       info->diffuse = s.diffuse;
       info->specular = s.specular;
@@ -107,6 +107,25 @@ bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
       info->ior = s.ior;
     }
   }
+
+  for (auto& t : triangles) {
+    if (rayTriangleIntersect(rayStart,rayLine,t,&test)) {
+      if (rayStart.distTo(test.hit_point) > currentDist) continue;
+      currentDist = rayStart.distTo(test.hit_point);
+
+      hit = true;
+      info->hit_point = test.hit_point;
+      info->t = test.t;
+      info->normal = test.normal;
+      info->ambient = t.ambient;
+      info->diffuse = t.diffuse;
+      info->specular = t.specular;
+      info->transmissive = t.transmissive;
+      info->ns = t.ns;
+      info->ior = t.ior;
+    }
+  }
+
   return hit;
 }
 
@@ -115,24 +134,14 @@ Line3D Reflect (Line3D ray, Line3D normal, Point3D hit){
   return sandwhich(plane,ray);
 }
 
-Line3D Refract(Line3D ray, Line3D normal, double ior) { //rn just making things brighter
-  double n_i = ior;
-  double n_r = 1.0;
-  double angle = acos(dot(ray,normal));
-  double cos_i = dot(ray,normal);
+Line3D Refract(Line3D ray, Line3D normal, float ior, float nr) {  // nr should be 1.0 initially
+  float cos_i = -std::max(-1.f,std::min(1.f,dot(ray,normal)));
+  if (cos_i < 0) return Refract(ray, (normal*-1), nr, ior);
 
-  // check sign of dot product ^^ cos_i
-  if (cos_i < 0) { cos_i = -cos_i; } 
-  else {
-    normal = normal*-1;
-    n_r = ior;
-    n_i = 1.0;
-  }
-
-  double sin2_r = ior*ior*(1.0 - cos_i*cos_i);
-  double cos_r = sqrtf(1.0 - sin2_r);
-  double n = n_r / n_i;
-  return (normal*(n*cos_i - cos_r)) + (ray*n);
+  float n = nr / ior;
+  float cos_r = sqrtf(1.f - n*n*(1.f - cos_i*cos_i));
+  Line3D T = ray*n + normal*(n*cos_i - cos_r);
+  return T;
 }
 
 Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInfo, int depth) {
@@ -215,11 +224,12 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
 
   } // spot lights
 
-  // Line3D mirror = Reflect(rayLine,hitInfo.normal,hit_point).normalized();
-  // color = color + (hitInfo.specular * EvaluateRayTree(hit_point,mirror,depth+1));
+  Line3D mirror = Reflect(rayLine,hitInfo.normal,hit_point).normalized();
+  color = color + (hitInfo.specular * EvaluateRayTree(hit_point,mirror,depth+1));
 
-  Point3D refract_pt = p - hitInfo.normal.dir()*0.001;
-  Line3D glass = Refract(rayLine,hitInfo.normal,hitInfo.ior).normalized();
+  bool outside = -dot(rayLine,hitInfo.normal) < 0;
+  Point3D refract_pt = outside ? p + hitInfo.normal.dir()*0.001 : p - hitInfo.normal.dir()*0.001;
+  Line3D glass = Refract(rayLine,hitInfo.normal,hitInfo.ior,1.0).normalized();
   color = color + (hitInfo.transmissive * EvaluateRayTree(refract_pt,glass,depth+1));
 
   color = color + (ambient_light*hitInfo.ambient);

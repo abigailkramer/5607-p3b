@@ -30,7 +30,7 @@ int max_vertices = 0;
 int max_normals = 0;
 std::vector<Point3D> vertices;    // allows access by number
 int vert_num = 0;
-std::vector<Dir3D> normals;
+std::vector<Line3D> normals;
 int norm_num = 0;
 
 // add triangle (v1,v2,v2) & normal_triangle (v1,v2,v3,n1,n2,n3)
@@ -39,7 +39,6 @@ Color background = Color(0,0,0);
 
 std::vector<Sphere> spheres;
 std::vector<Triangle> triangles;
-std::vector<NormalTriangle> norm_triangles;
 
 //Material Parameters - to set as "state" vars
 Color ambient_color = Color(0,0,0);
@@ -137,7 +136,7 @@ void parseSceneFile(std::string fileName){
       if (norm_num == max_normals) {
         continue;
       }
-      normals.push_back(Dir3D(x,y,z));
+      normals.push_back(Line3D(x,y,z));
       norm_num++;
     }
     else if (cmd == "triangle:") {
@@ -147,19 +146,39 @@ void parseSceneFile(std::string fileName){
       t.v1 = vertices[v1];
       t.v2 = vertices[v2];
       t.v3 = vertices[v3];
+      t.is_normal = false;
+
+      // set material variables based on current state
+      t.ambient = ambient_color;
+      t.diffuse = diffuse_color;
+      t.specular = specular_color;
+      t.transmissive = transmissive_color;
+      t.ns = ns;
+      t.ior = ior;
+
       triangles.push_back(t);
     }
     else if (cmd == "normal_triangle:") {
       int v1,v2,v3,n1,n2,n3;
       file >> v1 >> v2 >> v3 >> n1 >> n2 >> n3;
-      NormalTriangle t = NormalTriangle();
+      Triangle t = Triangle();
       t.v1 = vertices[v1];
       t.v2 = vertices[v2];
       t.v3 = vertices[v3];
       t.n1 = normals[v1];
       t.n2 = normals[v2];
-      t.n3 = normals[v3];     
-      norm_triangles.push_back(t);       
+      t.n3 = normals[v3];
+      t.is_normal = true;
+
+      // set material variables based on current state
+      t.ambient = ambient_color;
+      t.diffuse = diffuse_color;
+      t.specular = specular_color;
+      t.transmissive = transmissive_color;
+      t.ns = ns;
+      t.ior = ior;
+
+      triangles.push_back(t);
     }
     else if (cmd == "sphere:") {
       float x,y,z,r;
