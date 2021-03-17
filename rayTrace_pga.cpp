@@ -56,7 +56,49 @@ bool raySphereIntersect_fast(Point3D rayStart, Line3D rayLine, Point3D sphereCen
   return false;
 }
 
+bool sameSide (Point3D p1, Point3D p2, Line3D a, Line3D b) {
+  Dir3D cp1 = cross(b-a, p1-a);
+  Dir3D cp2 = cross(b-a, p2-a);
+  return dot(cp1,cp2) >= 0.f;
+}
+
 bool rayTriangleIntersect(Point3D rayStart, Line3D rayLine, Triangle t, HitInformation *hit) {
+  // if a triangle is normal - interpolate normals using barycentric coords of the intersection
+
+  double epsilon = 0.00000001;
+  Dir3D edge1, edge2, h, s, q;
+  double a,f,u,v;
+  edge1 = t.v1 - t.v0;
+  edge2 = t.v2 - t.v0;
+  Dir3D triNorm = cross(edge2,edge1); // N
+
+  if (dot(triNorm,rayLine.dir()) > 0) {
+    triNorm = triNorm*-1;
+  }
+
+  h = cross(rayLine.dir(),edge2);
+  a = dot(edge1,h);
+  if (a > -epsilon && a < epsilon) return false; // parallel
+
+  f = 1.0/a;
+  s = rayStart - t.v0;
+  u = f*dot(s,h);
+  if (u < 0.0 || u > 1.0) return false;
+
+  q = cross(s,edge1);
+  v = f*dot(rayLine.dir(),q);
+  if (v < 0.0 || u+v > 1.0) return false;
+
+  // compute t to find intersection point
+  double w = f*dot(edge2,q);
+  if (w > epsilon) {
+    hit->t = w;
+    hit->hit_point = rayStart + rayLine.dir()*w;
+    hit->normal = vee(hit->hit_point,triNorm).normalized();
+    return true;
+  } else {
+    return false;
+  }
 
   return false;
 }
@@ -71,20 +113,18 @@ bool raySphereIntersect(Point3D rayStart, Line3D rayLine, Point3D sphereCenter, 
   Point3D p2 = projPoint + rayLine.dir()*w; 
 
   if (dot((p1-rayStart),rayLine.dir()) >= 0){
-    hit->t = w;
     hit->hit_point = p1;
-    hit->normal = vee(sphereCenter,hit->hit_point).normalized();
     return true;     //Is the first point in same direction as the ray line?
   }
   if (dot((p2-rayStart),rayLine.dir()) >= 0){    
-    hit->t = w;
     hit->hit_point = p2;
-    hit->normal = vee(sphereCenter,hit->hit_point).normalized();
     return true;     //Is the second point in same direction as the ray line?
   }
   return false;
 }
 
+// returns true/false - &info = the closest intersection HitInformation
+// goes through all primitives
 bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
   double currentDist = INF;                              // start as far away as possible
   HitInformation test = HitInformation();
@@ -97,8 +137,8 @@ bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
 
       hit = true;
       info->hit_point = test.hit_point;
-      info->t = test.t;
-      info->normal = test.normal;
+      info->t = rayStart.distTo(info->hit_point);
+      info->normal = vee(s.pos,info->hit_point).normalized();
       info->ambient = s.ambient;
       info->diffuse = s.diffuse;
       info->specular = s.specular;
@@ -115,7 +155,8 @@ bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
 
       hit = true;
       info->hit_point = test.hit_point;
-      info->t = test.t;
+      // info->t = test.t;
+      info->t = rayStart.distTo(info->hit_point);
       info->normal = test.normal;
       info->ambient = t.ambient;
       info->diffuse = t.diffuse;
@@ -152,18 +193,17 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
   Dir3D V = vee(p,eye).dir().normalized();
 
   for (auto& light : dir_lights) {
-    Dir3D L = light.direction.normalized();
+    Dir3D L = light.direction.normalized()*-1;
     Line3D shadow = vee(p,L).normalized();
     HitInformation shadow_hit = HitInformation();
     bool blocked = false;
 
-    for (auto& s : spheres) {
-      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
-    }
+    if (intersect(hit_point,shadow,&shadow_hit)) blocked = true;
+
     if (blocked) continue;
 
     float n_l = std::max(dot(N,L),0.f);
-    Dir3D R = (L - 2*(dot(L,N)*N)).normalized();
+    Dir3D R = (L - 2*(dot(L,N)*N)).normalized()*-1;
     float v_r = pow(std::max(dot(V,R),0.f), hitInfo.ns);
 
     Color contribution = ((hitInfo.diffuse*n_l) + (hitInfo.specular*v_r)) * light.intensity;
@@ -177,16 +217,13 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     Line3D lightLine = vee(light.location,L).normalized();
     Line3D shadow = vee(hit_point,light.location).normalized();
 
-    for (auto& s : spheres) {
-      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
-    }
+    double dist = hit_point.distTo(light.location); 
 
-    double dist = p.distTo(light.location);  
+    if (intersect(hit_point,shadow,&shadow_hit)) blocked = true; 
     if (blocked && shadow_hit.t < dist) continue;
 
     float n_l = std::max(dot(N,L),0.f);
-    Line3D line = -1*MultiVector(lightLine);
-    Dir3D R = Reflect(line,hitInfo.normal,hit_point).dir();
+    Dir3D R = Reflect(lightLine,hitInfo.normal,hit_point).dir();
     float v_r = pow(std::max(dot(V,R),0.f), hitInfo.ns);
 
     Color contribution = ((hitInfo.diffuse*n_l) + (hitInfo.specular*v_r));
@@ -202,14 +239,12 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     Line3D shadow = vee(hit_point, light.location).normalized();
     Line3D lightLine = vee(light.location,L);
 
-    for (auto& s : spheres) {
-      if (raySphereIntersect(hit_point,shadow,s.pos,s.radius,&shadow_hit)) blocked = true;
-    }
+    if (intersect(hit_point,shadow,&shadow_hit)) blocked = true;
 
     float angle = acos(dot(shadow.normalized(),lightLine.normalized()));
-    angle *= (180/M_PI);
+    angle *= (180.0f/M_PI);
     double dist = p.distTo(light.location);  
-    if (blocked && shadow_hit.t < dist || (angle > light.angle2)) continue;
+    if ((blocked && shadow_hit.t < dist) || (angle > light.angle2)) continue;
 
     float attenuation = 1.0 / (1.0 + dist*dist);
     if (angle < light.angle1) attenuation = 1.0 / dist;    
@@ -267,17 +302,19 @@ int main(int argc, char** argv){
   Image outputImg = Image(img_width,img_height);
   auto t_start = std::chrono::high_resolution_clock::now();
 
+  // TODO: implement supersampling (check bookmarks bar for reference)
+
+  // basic sampling
   for (int i = 0; i < img_width; i++) {
     for (int j = 0; j < img_height; j++) {
       float u = (halfW - (imgW)*((i+0.5)/imgW));
       float v = (halfH - (imgH)*((j+0.5)/imgH));
       Point3D p = eye - d*forward + u*right + v*up;
       Dir3D rayDir = (p - eye); 
-      Line3D rayLine = vee(eye,rayDir).normalized();  //Normalizing here is optional
+      Line3D rayLine = vee(eye,rayDir).normalized();
 
       Color color = EvaluateRayTree(eye,rayLine,0);
       outputImg.setPixel(i,j,color);
-
     }
   }
 

@@ -234,9 +234,9 @@ struct Sphere{
 };
 
 struct Triangle{
-  Point3D v1,v2,v3;
-  Line3D n1,n2,n3;
-  Line3D norm;
+  Point3D v0,v1,v2;
+  Line3D n0,n1,n2;
+  Line3D normal;
   bool is_normal;
 
   float ior;
@@ -244,14 +244,6 @@ struct Triangle{
   Color ambient, diffuse, specular, transmissive;
 
   Triangle() {} ;
-};
-
-struct NormalTriangle{
-  Point3D v1,v2,v3;
-  Dir3D n1,n2,n3;
-  Dir3D norm;
-
-  NormalTriangle() {} ;
 };
 
 struct DirLight{
