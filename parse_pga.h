@@ -141,9 +141,9 @@ void parseSceneFile(std::string fileName){
       int v1,v2,v3;
       file >> v1 >> v2 >> v3;
       Triangle t = Triangle();
-      t.v0 = vertices[v1];
-      t.v1 = vertices[v2];
-      t.v2 = vertices[v3];
+      t.v1 = vertices[v1];
+      t.v2 = vertices[v2];
+      t.v3 = vertices[v3];
       t.is_normal = false;
 
       // set material variables based on current state
@@ -160,12 +160,12 @@ void parseSceneFile(std::string fileName){
       int v1,v2,v3,n1,n2,n3;
       file >> v1 >> v2 >> v3 >> n1 >> n2 >> n3;
       Triangle t = Triangle();
-      t.v0 = vertices[v1];
-      t.v1 = vertices[v2];
-      t.v2 = vertices[v3];
-      t.n0 = normals[v1];
-      t.n1 = normals[v2];
-      t.n2 = normals[v3];
+      t.v1 = vertices[v1];
+      t.v2 = vertices[v2];
+      t.v3 = vertices[v3];
+      t.n1 = normals[n1];
+      t.n2 = normals[n2];
+      t.n3 = normals[n3];
       t.is_normal = true;
 
       // set material variables based on current state

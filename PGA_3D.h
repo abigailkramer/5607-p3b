@@ -234,8 +234,8 @@ struct Sphere{
 };
 
 struct Triangle{
-  Point3D v0,v1,v2;
-  Line3D n0,n1,n2;
+  Point3D v1,v2,v3;
+  Line3D n1,n2,n3;
   Line3D normal;
   bool is_normal;
 
@@ -500,8 +500,19 @@ inline MultiVector operator*(Plane3D p, Line3D l){
 // Vee/Join Operations
 
 inline Line3D vee(Point3D lhs, Point3D rhs){
-  return MultiVector(lhs).vee(rhs);
+  //return MultiVector(lhs).vee(rhs);
+  float wx = rhs.x - lhs.x;
+  float wy = rhs.y - lhs.y;
+  float wz = rhs.z - lhs.z;
+  float xy = lhs.x*rhs.y - lhs.y*rhs.x;
+  float zx = lhs.z*rhs.x - lhs.x*rhs.z;
+  float yz = lhs.y*rhs.z - lhs.z*rhs.y;
+  return Line3D(wx, wy, wz, yz, zx, xy); //swapped for dual
 }
+
+// inline Line3D vee(Point3D lhs, Point3D rhs){
+//   return MultiVector(lhs).vee(rhs);
+// }
 
 inline Line3D vee(Point3D p, Dir3D d){
   //return MultiVector(p).vee(d);
@@ -523,15 +534,33 @@ inline Plane3D vee(Point3D a, Point3D b, Point3D c){
   float xy = a.x*b.y - a.y*b.x;
   float zx = a.z*b.x - a.x*b.z;
   float yz = a.y*b.z - a.z*b.y;
-
   //Vee line and point c to get a plane
   float wyx = - wx*c.y + wy*c.x - xy;
   float wxz = + wx*c.z - wz*c.x - zx;
   float wzy = - wy*c.z + wz*c.y - yz;
-  float xyz = + xy*c.z + zx*c.y + yz;
-
+  float xyz = + xy*c.z + zx*c.y + yz*c.x;
   return Plane3D(wzy,wxz,wyx,xyz); //Return dual as it's a vee operation
 }
+
+// inline Plane3D vee(Point3D a, Point3D b, Point3D c){
+//   //return MultiVector(a).vee(b).vee(c);
+//   //Vee to points a and b to make a line
+//   float wx = b.x - a.x;
+//   float wy = b.y - a.y;
+//   float wz = b.z - a.z;
+//   float xy = a.x*b.y - a.y*b.x;
+//   float zx = a.z*b.x - a.x*b.z;
+//   float yz = a.y*b.z - a.z*b.y;
+
+//   //Vee line and point c to get a plane
+//   float wyx = - wx*c.y + wy*c.x - xy;
+//   float wxz = + wx*c.z - wz*c.x - zx;
+//   float wzy = - wy*c.z + wz*c.y - yz;
+//   // float xyz = + xy*c.z + zx*c.y + yz;
+//   float xyz = + xy*c.z + zx*c.y + yz*c.x;
+
+//   return Plane3D(wzy,wxz,wyx,xyz); //Return dual as it's a vee operation
+// }
 
 inline Plane3D vee(Point3D a, Point3D b, HomogeneousPoint3D c){
   //return MultiVector(a).vee(b).vee(c);

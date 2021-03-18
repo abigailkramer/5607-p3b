@@ -5,7 +5,7 @@ camera_pos: 10 10 -10
 camera_fwd: .4 .3 -.3
 camera_up: 0 1 0
 camera_fov_ha: 20
-output_image: ShadowTest.png
+output_image: shadow.png
 #film_resolution: 300 300
 film_resolution: 800 600
 #film_resolution: 1024 768

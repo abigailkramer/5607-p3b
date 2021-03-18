@@ -56,45 +56,76 @@ bool raySphereIntersect_fast(Point3D rayStart, Line3D rayLine, Point3D sphereCen
   return false;
 }
 
-bool sameSide (Point3D p1, Point3D p2, Line3D a, Line3D b) {
-  Dir3D cp1 = cross(b-a, p1-a);
-  Dir3D cp2 = cross(b-a, p2-a);
-  return dot(cp1,cp2) >= 0.f;
+bool rayTriIntersect(Point3D rayStart, Line3D rayLine, Triangle t, HitInformation *hit) {
+  Plane3D triPlane = vee(t.v1,t.v2,t.v3).normalized();
+  Point3D hitPoint = Point3D(wedge(rayLine,triPlane));
+
+  double a = vee(t.v2,t.v3,hitPoint).magnitude() / triPlane.magnitude();   //v1
+  double b = vee(t.v3,t.v1,hitPoint).magnitude() / triPlane.magnitude();   //v2
+  double c = vee(t.v1,t.v2,hitPoint).magnitude() / triPlane.magnitude();   //v3
+
+  double epsilon = 0.00000001;
+  Dir3D edge1 = t.v2 - t.v1;
+  Dir3D edge2 = t.v3 - t.v1;
+
+  if (a < 0.0 || a > 1.0) return false;
+  if (b < 0.0 || b > 1.0) return false;
+  if (c < 0.0 || c > 1.0) return false;
+  if (a+b+c < 1.000001) return false;
+
+  hit->hit_point = hitPoint;
+  if (t.is_normal) {
+    hit->normal = (t.n1*a + t.n2*b + t.n3*c).normalized();
+  } else {
+    Dir3D triNorm = cross(edge2,edge1).normalized(); // N
+    if (dot(triNorm,rayLine.dir()) > 0) {
+      triNorm = triNorm*-1;
+    }
+    hit->normal = vee(hit->hit_point,triNorm).normalized();
+  }
+
+  return true;
 }
 
 bool rayTriangleIntersect(Point3D rayStart, Line3D rayLine, Triangle t, HitInformation *hit) {
-  // if a triangle is normal - interpolate normals using barycentric coords of the intersection
+  Plane3D triPlane = vee(t.v1,t.v2,t.v3).normalized();
+  Point3D hitPoint = Point3D(wedge(rayLine,triPlane));
 
   double epsilon = 0.00000001;
-  Dir3D edge1, edge2, h, s, q;
-  double a,f,u,v;
-  edge1 = t.v1 - t.v0;
-  edge2 = t.v2 - t.v0;
-  Dir3D triNorm = cross(edge2,edge1); // N
+  Dir3D edge1 = t.v2 - t.v1;
+  Dir3D edge2 = t.v3 - t.v1;
 
+  // Dir3D h = cross(rayLine.dir(),edge2);
+  double a = dot(edge1,cross(rayLine.dir(),edge2));
+  if (a == 0) return false;
+
+  double f = 1.0/a;
+  // Dir3D s = rayStart - t.v1;
+  double u = f*dot(rayStart - t.v1,cross(rayLine.dir(),edge2));
+  if (u < 0.0 || u > 1.0) return false;
+
+  // Dir3D q = cross(rayStart - t.v1,edge1);
+  double v = f*dot(rayLine.dir(),cross(rayStart - t.v1,edge1));
+  if (v < 0.0 || u+v > 1.0) return false;
+ 
+  Dir3D triNorm = cross(edge2,edge1).normalized(); // N
   if (dot(triNorm,rayLine.dir()) > 0) {
     triNorm = triNorm*-1;
   }
 
-  h = cross(rayLine.dir(),edge2);
-  a = dot(edge1,h);
-  if (a > -epsilon && a < epsilon) return false; // parallel
-
-  f = 1.0/a;
-  s = rayStart - t.v0;
-  u = f*dot(s,h);
-  if (u < 0.0 || u > 1.0) return false;
-
-  q = cross(s,edge1);
-  v = f*dot(rayLine.dir(),q);
-  if (v < 0.0 || u+v > 1.0) return false;
-
-  // compute t to find intersection point
-  double w = f*dot(edge2,q);
+  double w = f*dot(edge2,cross(rayStart - t.v1,edge1));
   if (w > epsilon) {
     hit->t = w;
-    hit->hit_point = rayStart + rayLine.dir()*w;
-    hit->normal = vee(hit->hit_point,triNorm).normalized();
+    hit->hit_point = hitPoint;
+    if (t.is_normal) {
+      // float a = vee(t.v2,t.v3,hitPoint).magnitude() / triPlane.magnitude();   //v1
+      // float b = vee(t.v3,t.v1,hitPoint).magnitude() / triPlane.magnitude();   //v2
+      // float c = vee(t.v1,t.v2,hitPoint).magnitude() / triPlane.magnitude();   //v3
+      hit->normal = (t.n1*u + t.n2*v + t.n3*(1-u-v));
+      // hit->normal = (t.n1*a + t.n2*b + t.n3*c).normalized();
+    } else {
+      hit->normal = vee(hit->hit_point,triNorm).normalized();  
+    }
     return true;
   } else {
     return false;
