@@ -17,6 +17,7 @@ This part of the project went pretty well, since I was able to achieve a decent 
 
 **Parallelization**
 - w/o parallelization - rendering never finished (was taking ridiculously long - had to Ctrl+C)
+- schedule(dynamic,4) - rendering took 1533105.28 ms
 - schedule(dynamic,5) - rendering took 1464798.72 ms
 - schedule(dynamic,8) - rendering took 
 
