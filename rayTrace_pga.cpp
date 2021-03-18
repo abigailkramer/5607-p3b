@@ -31,12 +31,17 @@
 //High resolution timer
 #include <chrono>
 
+#include <omp.h>
+
 //Scene file parser
 #include "parse_pga.h"
 
 
 Color ApplyLightingModel(Point3D rayStart, Line3D rayLine,HitInformation hitInfo, int depth);
 Color EvaluateRayTree(Point3D rayStart, Line3D rayLine, int depth);
+
+float clamp(float min, float max, float x)
+{ return (x<min) ? min : (x>max) ? max : x; }
 
 bool raySphereIntersect_fast(Point3D rayStart, Line3D rayLine, Point3D sphereCenter, float sphereRadius, HitInformation *hit){
   Dir3D dir = rayLine.dir();
@@ -56,82 +61,40 @@ bool raySphereIntersect_fast(Point3D rayStart, Line3D rayLine, Point3D sphereCen
   return false;
 }
 
-bool rayTriIntersect(Point3D rayStart, Line3D rayLine, Triangle t, HitInformation *hit) {
-  Plane3D triPlane = vee(t.v1,t.v2,t.v3).normalized();
-  Point3D hitPoint = Point3D(wedge(rayLine,triPlane));
-
-  double a = vee(t.v2,t.v3,hitPoint).magnitude() / triPlane.magnitude();   //v1
-  double b = vee(t.v3,t.v1,hitPoint).magnitude() / triPlane.magnitude();   //v2
-  double c = vee(t.v1,t.v2,hitPoint).magnitude() / triPlane.magnitude();   //v3
-
-  double epsilon = 0.00000001;
-  Dir3D edge1 = t.v2 - t.v1;
-  Dir3D edge2 = t.v3 - t.v1;
-
-  if (a < 0.0 || a > 1.0) return false;
-  if (b < 0.0 || b > 1.0) return false;
-  if (c < 0.0 || c > 1.0) return false;
-  if (a+b+c < 1.000001) return false;
-
-  hit->hit_point = hitPoint;
-  if (t.is_normal) {
-    hit->normal = (t.n1*a + t.n2*b + t.n3*c).normalized();
-  } else {
-    Dir3D triNorm = cross(edge2,edge1).normalized(); // N
-    if (dot(triNorm,rayLine.dir()) > 0) {
-      triNorm = triNorm*-1;
-    }
-    hit->normal = vee(hit->hit_point,triNorm).normalized();
-  }
-
-  return true;
-}
-
 bool rayTriangleIntersect(Point3D rayStart, Line3D rayLine, Triangle t, HitInformation *hit) {
   Plane3D triPlane = vee(t.v1,t.v2,t.v3).normalized();
   Point3D hitPoint = Point3D(wedge(rayLine,triPlane));
-
-  double epsilon = 0.00000001;
   Dir3D edge1 = t.v2 - t.v1;
   Dir3D edge2 = t.v3 - t.v1;
 
-  // Dir3D h = cross(rayLine.dir(),edge2);
   double a = dot(edge1,cross(rayLine.dir(),edge2));
   if (a == 0) return false;
 
   double f = 1.0/a;
-  // Dir3D s = rayStart - t.v1;
   double u = f*dot(rayStart - t.v1,cross(rayLine.dir(),edge2));
   if (u < 0.0 || u > 1.0) return false;
 
-  // Dir3D q = cross(rayStart - t.v1,edge1);
   double v = f*dot(rayLine.dir(),cross(rayStart - t.v1,edge1));
   if (v < 0.0 || u+v > 1.0) return false;
  
-  Dir3D triNorm = cross(edge2,edge1).normalized(); // N
+  Dir3D triNorm = cross(edge2,edge1).normalized();
   if (dot(triNorm,rayLine.dir()) > 0) {
     triNorm = triNorm*-1;
   }
 
   double w = f*dot(edge2,cross(rayStart - t.v1,edge1));
-  if (w > epsilon) {
-    hit->t = w;
+  if (w > 0.00000001) {
     hit->hit_point = hitPoint;
     if (t.is_normal) {
-      // float a = vee(t.v2,t.v3,hitPoint).magnitude() / triPlane.magnitude();   //v1
-      // float b = vee(t.v3,t.v1,hitPoint).magnitude() / triPlane.magnitude();   //v2
-      // float c = vee(t.v1,t.v2,hitPoint).magnitude() / triPlane.magnitude();   //v3
-      hit->normal = (t.n1*u + t.n2*v + t.n3*(1-u-v));
-      // hit->normal = (t.n1*a + t.n2*b + t.n3*c).normalized();
-    } else {
-      hit->normal = vee(hit->hit_point,triNorm).normalized();  
+      float a = vee(t.v2,t.v3,hitPoint).magnitude() / triPlane.magnitude();   //v1
+      float b = vee(t.v3,t.v1,hitPoint).magnitude() / triPlane.magnitude();   //v2
+      float c = vee(t.v1,t.v2,hitPoint).magnitude() / triPlane.magnitude();   //v3
+      hit->normal = (t.n1*a + t.n2*b + t.n3*c).normalized();
     }
+    else hit->normal = vee(hit->hit_point,triNorm).normalized();
     return true;
-  } else {
-    return false;
-  }
-
-  return false;
+  } 
+  else return false;
 }
 
 bool raySphereIntersect(Point3D rayStart, Line3D rayLine, Point3D sphereCenter, float sphereRadius, HitInformation *hit) {
@@ -186,7 +149,6 @@ bool intersect(Point3D rayStart, Line3D rayLine, HitInformation *info) {
 
       hit = true;
       info->hit_point = test.hit_point;
-      // info->t = test.t;
       info->t = rayStart.distTo(info->hit_point);
       info->normal = test.normal;
       info->ambient = t.ambient;
@@ -207,13 +169,12 @@ Line3D Reflect (Line3D ray, Line3D normal, Point3D hit){
 }
 
 Line3D Refract(Line3D ray, Line3D normal, float ior, float nr) {  // nr should be 1.0 initially
-  float cos_i = -std::max(-1.f,std::min(1.f,dot(ray,normal)));
+  float cos_i = -clamp(-1,1,dot(ray,normal));
   if (cos_i < 0) return Refract(ray, (normal*-1), nr, ior);
 
   float n = nr / ior;
   float cos_r = sqrtf(1.f - n*n*(1.f - cos_i*cos_i));
-  Line3D T = ray*n + normal*(n*cos_i - cos_r);
-  return T;
+  return ray*n + normal*(n*cos_i - cos_r);
 }
 
 Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInfo, int depth) {
@@ -230,7 +191,6 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     bool blocked = false;
 
     if (intersect(hit_point,shadow,&shadow_hit)) blocked = true;
-
     if (blocked) continue;
 
     float n_l = std::max(dot(N,L),0.f);
@@ -314,8 +274,7 @@ Color EvaluateRayTree(Point3D rayStart, Line3D rayLine, int depth) {
   }
 }
 
-int main(int argc, char** argv){
-  
+int main(int argc, char** argv){  
   //Read command line paramaters to get scene file
   if (argc != 2){
      std::cout << "Usage: ./a.out scenefile\n";
@@ -333,9 +292,8 @@ int main(int argc, char** argv){
   Image outputImg = Image(img_width,img_height);
   auto t_start = std::chrono::high_resolution_clock::now();
 
-  // TODO: implement supersampling (check bookmarks bar for reference)
-
   // basic sampling
+  #pragma omp parallel for schedule(dynamic, 5)
   for (int i = 0; i < img_width; i++) {
     for (int j = 0; j < img_height; j++) {
       float u = (halfW - (imgW)*((i+0.5)/imgW));

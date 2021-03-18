@@ -10,7 +10,7 @@ film_resolution: 800 600
 #film_resolution: 1024 768
 #film_resolution: 1920 1080
 
-
+#directional_light: 1 1 1 -5 -2 -2
 #White overhead light
 point_light: 20 10 10 1.5 -14 -3
 directional_light: 1 1 1 0 .8 .4
