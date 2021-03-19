@@ -228,17 +228,34 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
     bool blocked = false;
     Dir3D L = (light.location - p).normalized();
     Line3D shadow = vee(hit_point, light.location).normalized();
-    Line3D lightLine = vee(light.location,L);
+    Line3D lightLine = vee(light.location,L).normalized();
+    Line3D line1 = vee(light.location,light.direction).normalized();
+    Line3D line2 = vee(light.location, hit_point).normalized();
 
     if (intersect(hit_point,shadow,&shadow_hit)) blocked = true;
 
-    float angle = acos(dot(shadow.normalized(),lightLine.normalized()));
-    angle *= (180.0f/M_PI);
-    double dist = p.distTo(light.location);  
-    if ((blocked && shadow_hit.t < dist) || (angle > light.angle2)) continue;
+    float angle = dot(line2.dir(),line1.dir());
+    // float angle = (dot((p - light.location).normalized(),light.direction.normalized()));
+    float angle1 = light.angle1*M_PI / 180.0f;
+    float angle2 = light.angle2*M_PI / 180.0f;
 
-    float attenuation = 1.0 / (1.0 + dist*dist);
-    if (angle < light.angle1) attenuation = 1.0 / dist;    
+    double dist = hit_point.distTo(light.location);  
+    if (blocked && shadow_hit.t < dist) continue;
+
+    float attenuation = 1.f / (1.f + dist*dist);
+    // printf("angle: %lf, angle1: %lf, angle2: %lf\n",angle,angle1,angle2);
+
+    float dropoff = 1;
+    if (angle > angle2) dropoff = 0;
+    if (angle < angle1) dropoff = 1;
+    if (angle < angle2 && angle > angle1) dropoff = 0;//1/(10);
+
+    // if (angle > angle2 || angle < -angle2) attenuation = 0;
+    // if (angle < angle1 || angle > -angle1) attenuation = 1 / (1+ dist*dist);
+
+    // points at angle < angle1, light behaves like point
+    // points at angle > angle2, light contributes nothing
+    // angle1 < angle < angle2 - fall off linearly        
 
     float n_l = std::max(dot(N,L),0.f);
     Dir3D R = Reflect(lightLine,hitInfo.normal,hit_point).dir();
@@ -246,7 +263,7 @@ Color ApplyLightingModel(Point3D rayStart, Line3D rayLine, HitInformation hitInf
 
     Color contribution = ((hitInfo.diffuse*n_l) + (hitInfo.specular*v_r));
     contribution = contribution*(light.intensity*attenuation);
-    color = color + contribution;
+    color = color + contribution*dropoff;
 
   } // spot lights
 
@@ -293,8 +310,10 @@ int main(int argc, char** argv){
   auto t_start = std::chrono::high_resolution_clock::now();
 
   // basic sampling
-  #pragma omp parallel for schedule(dynamic, 5)
+  // #pragma omp parallel for schedule(dynamic, 8)
+  #pragma omp parallel for
   for (int i = 0; i < img_width; i++) {
+    #pragma omp parallel for
     for (int j = 0; j < img_height; j++) {
       float u = (halfW - (imgW)*((i+0.5)/imgW));
       float v = (halfH - (imgH)*((j+0.5)/imgH));

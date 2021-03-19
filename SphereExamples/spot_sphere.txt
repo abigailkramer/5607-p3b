@@ -2,5 +2,8 @@
 #The background is 50% gray.
 output_image: spotsphere.png
 sphere: 0 0 2 1
-spot_light: 0 .5 0 1 0 1 0 1 2 45 90
+#spot_light: 0 .5 0 1 0 .9 0 1 2 60 90
+#spot_light: 0 .5 0 1 0 1 0 1 2 45 90
+#spot_light: 0 .5 0 -1 0 1 0 1 2 20 30
+spot_light: 0 .5 0 0 .1 0 0 1 2 45 50
 background: .5 .5 .5
