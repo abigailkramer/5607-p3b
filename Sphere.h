@@ -5,7 +5,7 @@
 
 class Sphere : public Object {
 public:
-    Sphere(Material material, Point3D pos, float radius);
+    Sphere(Material material, Point3D position, float rad);
     ~Sphere();
 
     Point3D&    GetRadius()     { return pos; }

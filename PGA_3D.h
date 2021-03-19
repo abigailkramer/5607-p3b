@@ -16,6 +16,12 @@ struct IdealLine3D; //An "ideal" line at infinity representing only directionali
 struct Plane3D; //A plane with the equation: xX + yY + zZ + w = 0 [plane normal is (x,y,z), w indicates distance from orig.]
 struct Motor3D; //An element which applies rotaton or tranlations, can be composed together [isomorphic to dual quaternions]
 struct Sphere; // Point3D position, float radius, ns, ior, Colors ambient, diffuse, spec, transmissive
+struct Triangle;
+struct Material;
+struct HitInformation;
+struct DirLight;
+struct PointLight;
+struct SpotLight;
 
 // ---------------------------------
 //  Define Primatives
@@ -217,6 +223,16 @@ struct Material {
   Color ambient, diffuse, specular, transmissive;
   int ns;
   float ior;
+
+  Material() {} ;
+  Material(Color a, Color d, Color s, Color t, int n, float i) {
+    ambient = a;
+    diffuse = d;
+    specular = s;
+    transmissive = t;
+    ns = n;
+    ior = i;
+  };
 };
 
 struct HitInformation {
@@ -226,6 +242,8 @@ struct HitInformation {
   int ns;
   float ior;
   double t;
+
+  HitInformation() {} ;
 };
 
 struct Sphere{
@@ -235,6 +253,7 @@ struct Sphere{
   float ior;
   int ns;
   Color ambient, diffuse, specular, transmissive;
+  Material material;
 
   Sphere() {} ;
 };
@@ -248,6 +267,7 @@ struct Triangle{
   float ior;
   int ns;
   Color ambient, diffuse, specular, transmissive;
+  Material material;
 
   Triangle() {} ;
 };

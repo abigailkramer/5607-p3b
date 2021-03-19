@@ -10,6 +10,7 @@
 #include <fstream>
 #include <cstring>
 #include <vector>
+#include "BVHNode.h"
 
 //Camera & Scene Parmaters (Global Variables)
 //Here we set default values, override them in parseSceneFile()
@@ -39,8 +40,10 @@ Color background = Color(0,0,0);
 
 std::vector<Sphere> spheres;
 std::vector<Triangle> triangles;
+// std::vector<Object*> objects;
 
 //Material Parameters - to set as "state" vars
+// Material material = Material(Color(0,0,0),Color(1,1,1),Color(0,0,0),Color(0,0,0),5,1.0);
 Color ambient_color = Color(0,0,0);
 Color diffuse_color = Color(1,1,1);
 Color specular_color = Color(0,0,0);
@@ -58,6 +61,9 @@ Color ambient_light = Color(0,0,0);
 //Misc.
 int max_depth = 5;
 
+#define INF ((unsigned) ~0)
+// bvh shit - root's midpoint is 0 - both 
+BVHNode root = BVHNode(-INF,INF,-INF,INF,0,0);
 
 void parseSceneFile(std::string fileName){
   //TODO: Override the default values with new data from the file "fileName"
@@ -147,6 +153,7 @@ void parseSceneFile(std::string fileName){
       t.is_normal = false;
 
       // set material variables based on current state
+      // t.material = material;
       t.ambient = ambient_color;
       t.diffuse = diffuse_color;
       t.specular = specular_color;
@@ -169,6 +176,7 @@ void parseSceneFile(std::string fileName){
       t.is_normal = true;
 
       // set material variables based on current state
+      // t.material = material;
       t.ambient = ambient_color;
       t.diffuse = diffuse_color;
       t.specular = specular_color;
@@ -185,7 +193,20 @@ void parseSceneFile(std::string fileName){
       s.pos = Point3D(x,y,z);
       s.radius = r;
 
+      int min_x = x-r;
+      int max_x = x+r;
+      int min_y = y-r;
+      int max_y = y+r;
+
+      root.addSphere(s);
+      if (x > root.mid_x) {
+        
+      } else { // x < root.mid_x
+
+      }
+
       // set material variables based on current state
+      // s.material = material;
       s.ambient = ambient_color;
       s.diffuse = diffuse_color;
       s.specular = specular_color;
@@ -208,6 +229,12 @@ void parseSceneFile(std::string fileName){
       file >> sr >> sg >> sb >> n >> tr >> tg >> tb >> io;
 
       // set new Material state variables
+      // material.ambient = Color(ar,ag,ab);
+      // material.diffuse = Color(dr,dg,db);
+      // material.specular = Color(sr,sg,sb);
+      // material.transmissive = Color(tr,tg,tb);
+      // material.ns = n;
+      // material.ior = io; 
       ambient_color = Color(ar,ag,ab);
       diffuse_color = Color(dr,dg,db);
       specular_color = Color(sr,sg,sb);

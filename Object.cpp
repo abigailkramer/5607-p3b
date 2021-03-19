@@ -1,6 +1,6 @@
 #include "Object.h"
 
-Object::Object(Material material) 
-    : objMaterial(material) {};
+// Object::Object(Material material) 
+//     : objMaterial(material) {};
 
-Object::~Object(void){ }
+// Object::~Object(void){ }
