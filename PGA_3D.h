@@ -213,12 +213,18 @@ struct Dir3D{
 /// Sphere & Light structs -- added for project3a
 // --------------------------------------------------------------------------------
 
+struct Material {
+  Color ambient, diffuse, specular, transmissive;
+  int ns;
+  float ior;
+};
+
 struct HitInformation {
   Color ambient, diffuse, specular, transmissive;
   Point3D hit_point;
   Line3D normal;
   int ns;
-  double ior;
+  float ior;
   double t;
 };
 
