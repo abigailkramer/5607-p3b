@@ -27,3 +27,9 @@ This part of the project went pretty well, since I was able to achieve a decent 
 - schedule(dynamic,5) - rendering took 1464798.72 ms
 
 ![plant](https://user-images.githubusercontent.com/59031606/111701410-cd468980-8808-11eb-9ed7-995c95e63169.png)
+
+![gear](https://user-images.githubusercontent.com/59031606/111848459-0f3f0080-88d9-11eb-9062-52492f79a16e.png)
+
+![foo](https://user-images.githubusercontent.com/59031606/111848461-1239f100-88d9-11eb-8420-20e21038606a.png)
+
+![bottle](https://user-images.githubusercontent.com/59031606/111848465-149c4b00-88d9-11eb-9ac6-ba65f54446c7.png)
