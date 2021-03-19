@@ -311,9 +311,9 @@ int main(int argc, char** argv){
 
   // basic sampling
   // #pragma omp parallel for schedule(dynamic, 8)
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic,5)
   for (int i = 0; i < img_width; i++) {
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic,5)
     for (int j = 0; j < img_height; j++) {
       float u = (halfW - (imgW)*((i+0.5)/imgW));
       float v = (halfH - (imgH)*((j+0.5)/imgH));
