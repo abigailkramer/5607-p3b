@@ -19,6 +19,5 @@ This part of the project went pretty well, since I was able to achieve a decent 
 - w/o parallelization - rendering never finished (was taking ridiculously long - had to Ctrl+C)
 - schedule(dynamic,4) - rendering took 1533105.28 ms
 - schedule(dynamic,5) - rendering took 1464798.72 ms
-- schedule(dynamic,8) - rendering took 
 
 ![plant](https://user-images.githubusercontent.com/59031606/111701410-cd468980-8808-11eb-9ed7-995c95e63169.png)
