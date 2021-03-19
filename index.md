@@ -12,6 +12,12 @@ This part of the project went pretty well, since I was able to achieve a decent 
 
 ![outdoor](https://user-images.githubusercontent.com/59031606/111701404-ca4b9900-8808-11eb-9473-c7c116d83001.png)
 
+**Parallelization**
+- w/o parallelization - 21246.26 ms
+- schedule(dynamic,4) - 5575.60 ms
+- schedule(dynamic) - 6830.64 ms
+- schedule(dynamic,8) - 5815.12 ms
+
 ![shadow](https://user-images.githubusercontent.com/59031606/111701440-d9cae200-8808-11eb-9305-ecbe9058d4a7.png)
 
 
