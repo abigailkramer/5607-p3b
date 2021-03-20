@@ -30,6 +30,10 @@ This part of the project went pretty well, since I was able to achieve a decent 
 
 ![gear](https://user-images.githubusercontent.com/59031606/111848459-0f3f0080-88d9-11eb-9062-52492f79a16e.png)
 
+**Artistic Image**
+
+![test](https://user-images.githubusercontent.com/59031606/111883922-2f7bc780-898c-11eb-82be-3f0fadb6a5d3.png)
+
 ![foo](https://user-images.githubusercontent.com/59031606/111848461-1239f100-88d9-11eb-8420-20e21038606a.png)
 
 ![bottle](https://user-images.githubusercontent.com/59031606/111848465-149c4b00-88d9-11eb-9ac6-ba65f54446c7.png)
